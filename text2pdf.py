@@ -88,5 +88,5 @@ def main():
         # temp.pdf 파일 삭제하기
         if os.path.isfile("temp.pdf"):
             os.remove("temp.pdf")
-
-main()
+if __name__ == "__main__":
+    main()
