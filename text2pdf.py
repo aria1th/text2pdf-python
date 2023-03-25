@@ -11,6 +11,7 @@ def install_reportlab():
 import reportlab.lib.pagesizes as pagesizes
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
+import re
 import os
 # txt 파일을 읽어서 문자열로 저장
 # reportlab.pdfbase.ttfonts 모듈 임포트
@@ -37,16 +38,27 @@ except:
 def txt_to_pdf(txt_file, encoding="utf-8", fontsize=20):
     # txt 파일을 읽어서 문자열로 저장
     with open(txt_file, "r", encoding=encoding) as f:
-        text = f.read()
+        lines = f.readlines()
     doc = SimpleDocTemplate("temp.pdf", pagesize=pagesizes.A4)
     # 스타일 객체 생성하기
     styles = getSampleStyleSheet()
-    # XML로 커버하기
-    text = f"<font name='NanumGothic' size='{fontsize}'>{text}</font>"
-    para = Paragraph(text, styles['Normal'])
-    para.style.leading = fontsize + 10
+    elements = []
+    for line in lines:
+        # XML로 커버하기
+        text = f"<font name='NanumGothic' size='{fontsize}'>{line}</font>"
+        try:
+            # Paragraph 객체를 만들기
+            para = Paragraph(text, styles['Normal'])
+        except ValueError:
+            # 유효하지 않은 XML 태그 제거하기
+            text = re.sub(r'<[^>]*>', '', text)
+            text = f"<font name='NanumGothic' size='{fontsize}'>{line}</font>"
+            # 다시 시도하기
+            para = Paragraph(text, styles['Normal'])
+        para.style.leading = fontsize + 10
+        elements.append(para)
     # Paragraph 객체를 pdf에 쓰기
-    doc.build([para])
+    doc.build(elements)
     if skip_pypdf:
         os.rename("temp.pdf", txt_file[:-4] + ".pdf")
         return
@@ -72,11 +84,9 @@ def main():
     # txt 파일만 필터링하기. glob.glob 대신 빠르게 사용, recursive하다면 glob.glob 또는 glob.iglob를 사용하면 될 것
     txt_files = [f for f in files if f.endswith(".txt")]
     for txt_file in txt_files:
-        txt_to_pdf(txt_file)
+        txt_to_pdf(txt_file, "utf-8")  # UTF-8 encoding 기준
         # temp.pdf 파일 삭제하기
         if os.path.isfile("temp.pdf"):
             os.remove("temp.pdf")
 
-
-if __name__ == '__main__':
-    main()
+main()
